@@ -17,7 +17,7 @@ module "osier" {
   source  = "github.com/osier-hq/terraform-aws-osier-oidc?ref=v0.1.0"
   org     = "acme"
   project = "platform"
-  # stacks = ["prod"]            # optional: narrow to named stacks
+  # stacks = ["prod"]            # only for a stack override (its Test carries that stack)
   plan_policy_arns = ["arn:aws:iam::aws:policy/ReadOnlyAccess"]       # what plan runs may do
   policy_arns      = ["arn:aws:iam::aws:policy/AdministratorAccess"]  # what apply runs may do: change to least privilege
 }
@@ -135,6 +135,8 @@ The plan role keeps the `ReadOnlyAccess` default. Put this in a separate configu
 ## Stacks
 
 `stacks = ["dev", "prod"]` narrows the trust to those stacks. With the default split, the plan role trusts `org:acme:project:platform:stack:dev:phase:plan` and the same for `prod`; the apply role trusts the `phase:apply` equivalents. Without `stacks`, any stack of the project is trusted (`stack:*`). With `split_apply_role = false`, the single role trusts `stack:<name>:*` per stack, or `org:<org>:project:<project>:*` without stacks.
+
+A module narrowed with `stacks` is for a stack override, not for the project connection: the project connection's Test token carries no stack (`…:stack:-:phase:plan`), so a narrowed role answers "Not authorized" to it.
 
 ## Thumbprint
 
