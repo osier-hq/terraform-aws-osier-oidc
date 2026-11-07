@@ -56,6 +56,18 @@ Set `split_apply_role = false` to get one role for both phases, carrying `policy
 | `create_provider` | Create the OIDC identity provider. | `bool` | `true` |
 | `issuer` | Osier issuer host, without a scheme. | `string` | `"osier.dev"` |
 
+`plan_policy_arns` and `policy_arns` are `for_each` keys, so their values must be known at plan time. To attach a policy created in the same configuration, attach it outside the module with `aws_iam_role_policy_attachment` on the module's role, or pass the ARNs of policies that already exist:
+
+```hcl
+resource "aws_iam_role_policy_attachment" "osier_apply_extra" {
+  role       = "osier-platform-apply"   # "osier-<project>-apply", or "<role_name>-apply" when role_name is set
+  policy_arn = aws_iam_policy.deploy.arn
+  depends_on = [module.osier]
+}
+```
+
+For the plan role use `"osier-<project>"` (or `role_name`) instead.
+
 ## Outputs
 
 | Name | Description |
@@ -66,7 +78,7 @@ Set `split_apply_role = false` to get one role for both phases, carrying `policy
 
 ## Console users
 
-If you create the provider and roles in the AWS console, create an IAM OIDC provider with URL `https://osier.dev` and audience `sts.amazonaws.com`, then create roles with these trust policies. Replace `<ACCOUNT_ID>` with your account id.
+If you create the provider and roles in the AWS console, create an IAM OIDC provider with URL `https://osier.dev` and audience `sts.amazonaws.com`, then create roles with these trust policies. Replace `<ACCOUNT_ID>` with your account id. Attach `ReadOnlyAccess` (or narrower read-only policies) to the plan role and least-privilege policies to the apply role.
 
 Plan role:
 
@@ -114,8 +126,11 @@ module "osier_second" {
   org             = "acme"
   project         = "billing"
   create_provider = false
+  policy_arns     = ["arn:aws:iam::aws:policy/AdministratorAccess"]  # what apply runs may do: change to least privilege
 }
 ```
+
+The plan role keeps the `ReadOnlyAccess` default. Put this in a separate configuration from the one that created the identity provider, or add `depends_on = [module.osier]` if both are in the same configuration, so the provider exists first.
 
 ## Stacks
 
